@@ -1,9 +1,9 @@
-# Impala select
+# Impselect
 
-Impala select is simple module for selecting data from Impala. It supports caching, batch select and creating temporary tables.
+Impselect is simple module for data selection from Impala. It supports caching, batch select and creating temporary tables.
 
 ## Installation
 
 ```
-pip install impselect
+pip install git+https://github.com/genichyar/impselect
 ```
