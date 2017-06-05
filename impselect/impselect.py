@@ -101,15 +101,26 @@ class Impala(object):
             print(result)
         return result
 
+    def describe_table(self, table_name):
+        sql = 'DESCRIBE {table_name}'.format(table_name=table_name)
+        result = self.__execute(sql)
+        return result
+
+    def get_file_path(self, name):
+        return os.path.join(self.__dir, name + '.csv.gz')
+
+    def get_batch_file_path(self, name, itervar):
+        return os.path.join(self.__dir, name + '_' + str(itervar).replace(' ', '_').replace(':', '_') + '.csv.gz')
+
     def load(self, name):
-        file_path = os.path.join(self.__dir, name + '.csv.gz')
-        return pd.read_csv(file_path, compression='gzip')
+        return pd.read_csv(self.get_file_path(name), compression='gzip')
+
+    def save(self, df, name):
+        df.to_csv(self.get_file_path(name), index=False, compression='gzip')
 
     def select(self, sql, name=None, table_name=None):
-        file_path = None
         if name:
-            file_path = os.path.join(self.__dir, name + '.csv.gz')
-            if os.path.isfile(file_path):
+            if os.path.isfile(self.get_file_path(name)):
                 if self.verbose >= 1:
                     print('Data for task "' + name + '" is exists. Passed.')
                 return self.load(name)
@@ -124,7 +135,7 @@ class Impala(object):
             df = self.__execute(sql)
 
         if name:
-            df.to_csv(file_path, index=False, compression='gzip')
+            self.save(df, name)
             if self.verbose >= 1:
                 print('Data for task "' + name + '" has written.')
 
@@ -132,9 +143,6 @@ class Impala(object):
 
     def prepare(self, sql, name):
         self.select(sql=sql, name=name)
-
-    def get_batch_file_path(self, name, itervar):
-        return os.path.join(self.__dir, name + '_' + str(itervar).replace(' ', '_').replace(':', '_') + '.csv.gz')
 
     def prepare_batch(self, sql, itervars, name):
         for itervar in itervars:
@@ -162,28 +170,18 @@ class Impala(object):
             if self.verbose >= 1:
                 print('Data for task "' + name + '" and itervar "' + str(itervar) + '" has written.')
 
-    def load_batch(self, itervars, name):
+    def load_batch(self, itervars, name, itervar_column=None):
         df = pd.DataFrame()
 
         for itervar in itervars:
             batch_file_path = self.get_batch_file_path(name, itervar)
-            df = pd.concat([df, pd.read_csv(batch_file_path, compression='gzip')], ignore_index=True)
+            tmp_df = pd.read_csv(batch_file_path, compression='gzip')
+            if itervar_column:
+                tmp_df[itervar_column] = str(itervar)
+            df = pd.concat([df, tmp_df], ignore_index=True)
 
         return df
 
-    def select_batch(self, sql, itervars, name):
-        file_path = os.path.join(self.__dir, name + '.csv.gz')
-        if os.path.isfile(file_path):
-            if self.verbose:
-                print('Data for task "' + name + '" is exists. Passed.')
-            return self.load(name)
-
+    def select_batch(self, sql, itervars, name, itervar_column=None):
         self.prepare_batch(sql, itervars, name)
-
-        df = self.load_batch(itervars, name)
-
-        df.to_csv(file_path, index=False, compression='gzip')
-        if self.verbose:
-            print('Data for task "' + name + '" has written.')
-
-        return df
+        return self.load_batch(itervars, name, itervar_column)
