@@ -21,20 +21,20 @@ For convenience you can create settings file `.impselect.txt` in user home direc
 ## Examples
 
 ```python
-# First of all import library and create Impala object.
+# First of all, we import library and create Impala object.
 from impselect import Impala
 i = Impala('your project name')
 
-# Simple select
+# Simple select.
 df = i.select('SELECT * FROM users')
 
-# Select with caching result to file
+# Select with caching result to file.
 df = i.select('SELECT * FROM users', 'task_name_1')
 
-# Select with creating temporary table
-df = i.select('SELECT * FROM users', table_name='table_name') # Also you can use caching to file
+# Select with creating temporary table.
+df = i.select('SELECT * FROM users', table_name='table_name') # Also you can use caching to file.
 
-# Batch select
-df = i.batch_select('SELECT * FROM users WHERE day = unix_timestamp("{itervar}")',
+# Batch select.
+df = i.select_batch('SELECT * FROM users WHERE day = unix_timestamp("{itervar}")',
                     ['2017-06-04', '2017-06-05'], 'task_name_2')
 ```
