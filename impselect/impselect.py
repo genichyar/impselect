@@ -170,15 +170,17 @@ class Impala(object):
             if self.verbose >= 1:
                 print('Data for task "' + name + '" and itervar "' + str(itervar) + '" has written.')
 
-    def load_batch(self, itervars, name, itervar_column=None):
-        df = pd.DataFrame()
+    def load_batch(self, itervars, name, itervar_column=None, transform=None):
 
+        tmp_df = []
         for itervar in itervars:
             batch_file_path = self.get_batch_file_path(name, itervar)
-            tmp_df = pd.read_csv(batch_file_path, compression='gzip')
+            tmp_df.append(pd.read_csv(batch_file_path, compression='gzip'))
             if itervar_column:
-                tmp_df[itervar_column] = str(itervar)
-            df = pd.concat([df, tmp_df], ignore_index=True)
+                tmp_df[-1][itervar_column] = str(itervar)
+            if callable(transform):
+                tmp_df[-1] = transform(tmp_df[-1])
+        df = pd.concat(tmp_df, ignore_index=True, copy=False)
 
         return df
 
