@@ -107,20 +107,23 @@ class Impala(object):
         return result
 
     def get_file_path(self, name):
+        return os.path.join(self.__dir, name)
+
+    def get_csv_path(self, name):
         return os.path.join(self.__dir, name + '.csv.gz')
 
-    def get_batch_file_path(self, name, itervar):
+    def get_batch_csv_path(self, name, itervar):
         return os.path.join(self.__dir, name + '_' + str(itervar).replace(' ', '_').replace(':', '_') + '.csv.gz')
 
     def load(self, name):
-        return pd.read_csv(self.get_file_path(name), compression='gzip')
+        return pd.read_csv(self.get_csv_path(name), compression='gzip')
 
     def save(self, df, name):
-        df.to_csv(self.get_file_path(name), index=False, compression='gzip')
+        df.to_csv(self.get_csv_path(name), index=False, compression='gzip')
 
     def select(self, sql, name=None, table_name=None):
         if name:
-            if os.path.isfile(self.get_file_path(name)):
+            if os.path.isfile(self.get_csv_path(name)):
                 if self.verbose >= 1:
                     print('Data for task "' + name + '" is exists. Passed.')
                 return self.load(name)
@@ -146,7 +149,7 @@ class Impala(object):
 
     def prepare_batch(self, sql, itervars, name):
         for itervar in itervars:
-            batch_file_path = self.get_batch_file_path(name, itervar)
+            batch_file_path = self.get_batch_csv_path(name, itervar)
             if os.path.isfile(batch_file_path):
                 if self.verbose >= 1:
                     print('Data for task "' + name + '" and itervar "' + str(itervar) + '" is exists. Passed.')
@@ -171,10 +174,9 @@ class Impala(object):
                 print('Data for task "' + name + '" and itervar "' + str(itervar) + '" has written.')
 
     def load_batch(self, itervars, name, itervar_column=None, transform=None):
-
         tmp_df = []
         for itervar in itervars:
-            batch_file_path = self.get_batch_file_path(name, itervar)
+            batch_file_path = self.get_batch_csv_path(name, itervar)
             tmp_df.append(pd.read_csv(batch_file_path, compression='gzip'))
             if itervar_column:
                 tmp_df[-1][itervar_column] = str(itervar)
