@@ -77,13 +77,16 @@ class Impala(object):
         return self.__dir
 
     def __execute(self, sql, ret='pandas'):
+        ret_val = None
         with connect(**self.connection) as con:
             cur = con.cursor()
             cur.execute(sql)
             if ret == 'pandas':
-                return as_pandas(cur)
+                ret_val = as_pandas(cur)
             elif ret == 'status':
-                return cur.status()
+                ret_val = cur.status()
+
+        return ret_val
 
     def create_table(self, sql, table_name):
         sql = 'CREATE TABLE {table_name} AS ({sql})'.format(table_name=table_name, sql=sql)
