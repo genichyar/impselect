@@ -164,7 +164,7 @@ class Impala(object):
                         df = self.__execute(sql.format(itervar=itervar))
                         break
                     except RPCError as e:
-                        print(e.message)
+                        print(str(e))
                         print('Exception was raised during selection. Retry.')
                         if i + 1 == self.try_except['count']:
                             raise
