@@ -118,11 +118,19 @@ class Impala(object):
     def get_batch_csv_path(self, name, itervar):
         return os.path.join(self.__dir, name + '_' + str(itervar).replace(' ', '_').replace(':', '_') + '.csv.gz')
 
-    def load(self, name):
-        return pd.read_csv(self.get_csv_path(name), compression='gzip')
+    def load(self, name, csv_options=None):
+        if csv_options is None:
+            csv_options = {}
+        options = {'compression': 'gzip'}
+        options.update(csv_options)
+        return pd.read_csv(self.get_csv_path(name), **options)
 
-    def save(self, df, name):
-        df.to_csv(self.get_csv_path(name), index=False, compression='gzip')
+    def save(self, df, name, csv_options=None):
+        if csv_options is None:
+            csv_options = {}
+        options = {'compression': 'gzip', 'index': False}
+        options.update(csv_options)
+        df.to_csv(self.get_csv_path(name), **options)
 
     def select(self, sql, name=None, table_name=None):
         if name:
