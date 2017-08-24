@@ -31,6 +31,10 @@ def mkdir_p(path):
             raise
 
 
+def prepare_filename(filename):
+    return filename.replace(' ', '_').replace(':', '_')
+
+
 class Impala(object):
 
     def __init__(self, name, connection=None, dir=None, verbose=None, try_except=None):
@@ -113,26 +117,26 @@ class Impala(object):
         return os.path.join(self.__dir, name)
 
     def get_csv_path(self, name):
-        return os.path.join(self.__dir, name + '.csv.gz')
+        return os.path.join(self.__dir, prepare_filename(name) + '.csv.gz')
 
     def get_batch_csv_path(self, name, itervar):
-        return os.path.join(self.__dir, name + '_' + str(itervar).replace(' ', '_').replace(':', '_') + '.csv.gz')
+        return os.path.join(self.__dir, prepare_filename(name + '_' + str(itervar)) + '.csv.gz')
 
     def load(self, name, csv_options=None):
         if csv_options is None:
             csv_options = {}
-        options = {'compression': 'gzip'}
+        options = {'compression': 'gzip', 'encoding': 'utf-8'}
         options.update(csv_options)
         return pd.read_csv(self.get_csv_path(name), **options)
 
     def save(self, df, name, csv_options=None):
         if csv_options is None:
             csv_options = {}
-        options = {'compression': 'gzip', 'index': False}
+        options = {'compression': 'gzip', 'index': False, 'encoding': 'utf-8'}
         options.update(csv_options)
         df.to_csv(self.get_csv_path(name), **options)
 
-    def select(self, sql, name=None, table_name=None):
+    def select(self, sql, name=None, table_name=None, csv_options=None):
         if name:
             if os.path.isfile(self.get_csv_path(name)):
                 if self.verbose >= 1:
@@ -149,7 +153,7 @@ class Impala(object):
             df = self.__execute(sql)
 
         if name:
-            self.save(df, name)
+            self.save(df, name, csv_options)
             if self.verbose >= 1:
                 print('Data for task "' + name + '" has written.')
 
@@ -158,7 +162,7 @@ class Impala(object):
     def prepare(self, sql, name):
         self.select(sql=sql, name=name)
 
-    def prepare_batch(self, sql, itervars, name):
+    def prepare_batch(self, sql, itervars, name, csv_options=None):
         for itervar in itervars:
             batch_file_path = self.get_batch_csv_path(name, itervar)
             if os.path.isfile(batch_file_path):
@@ -180,15 +184,25 @@ class Impala(object):
             else:
                 df = self.__execute(sql.format(itervar=itervar))
 
-            df.to_csv(batch_file_path, index=False, compression='gzip')
+            if csv_options is None:
+                csv_options = {}
+            options = {'compression': 'gzip', 'index': False, 'encoding': 'utf-8'}
+            options.update(csv_options)
+
+            df.to_csv(batch_file_path, **options)
             if self.verbose >= 1:
                 print('Data for task "' + name + '" and itervar "' + str(itervar) + '" has written.')
 
-    def load_batch(self, itervars, name, itervar_column=None, transform=None):
+    def load_batch(self, itervars, name, itervar_column=None, transform=None, csv_options=None):
+        if csv_options is None:
+            csv_options = {}
+        options = {'compression': 'gzip', 'encoding': 'utf-8'}
+        options.update(csv_options)
+
         tmp_df = []
         for itervar in itervars:
             batch_file_path = self.get_batch_csv_path(name, itervar)
-            tmp_df.append(pd.read_csv(batch_file_path, compression='gzip'))
+            tmp_df.append(pd.read_csv(batch_file_path, **options))
             if itervar_column:
                 tmp_df[-1][itervar_column] = str(itervar)
             if callable(transform):
@@ -197,6 +211,6 @@ class Impala(object):
 
         return df
 
-    def select_batch(self, sql, itervars, name, itervar_column=None):
-        self.prepare_batch(sql, itervars, name)
-        return self.load_batch(itervars, name, itervar_column)
+    def select_batch(self, sql, itervars, name, itervar_column=None, csv_options=None):
+        self.prepare_batch(sql, itervars, name, csv_options)
+        return self.load_batch(itervars, name, itervar_column, csv_options=csv_options)
